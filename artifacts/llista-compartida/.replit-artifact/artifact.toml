@@ -1,0 +1,28 @@
+kind = "web"
+previewPath = "/"
+title = "Llista compartida"
+description = "Una app web mòbil en català per cercar productes, preparar i revisar la compra, conservar la llista al dispositiu i compartir-la fàcilment amb altres persones."
+version = "1.0.0"
+id = "artifacts/llista-compartida"
+router = "path"
+
+[[services]]
+name = "web"
+paths = [ "/" ]
+localPort = 20869
+
+[services.development]
+run = "pnpm --filter @workspace/llista-compartida run dev"
+
+[services.production]
+build = [ "pnpm", "--filter", "@workspace/llista-compartida", "run", "build" ]
+serve = "static"
+publicDir = "artifacts/llista-compartida/dist/public"
+
+[[services.production.rewrites]]
+from = "/*"
+to = "/index.html"
+
+[services.env]
+PORT = "20869"
+BASE_PATH = "/"
