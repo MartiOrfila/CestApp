@@ -1,1 +1,1 @@
-- [Llista compartida](llista-compartida.md) — Keep the app Catalan-first; “shared” means sending lists through messaging/social apps, not live collaboration.
+- [Llista compartida](llista-compartida.md) — Keep the app Catalan-first; support external sharing and live edits by authorized participants.

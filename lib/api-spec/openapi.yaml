@@ -10,6 +10,8 @@ servers:
 tags:
   - name: health
     description: Health operations
+  - name: shopping-lists
+    description: Shared shopping lists
 paths:
   /healthz:
     get:
@@ -24,6 +26,207 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/HealthStatus"
+  /shopping-lists:
+    get:
+      operationId: getShoppingLists
+      tags: [shopping-lists]
+      summary: List shopping lists available to the current user
+      responses:
+        "200":
+          description: Shopping lists
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/ShoppingListSummary"
+    post:
+      operationId: createShoppingList
+      tags: [shopping-lists]
+      summary: Create a shopping list for the current user
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ShoppingListInput"
+      responses:
+        "201":
+          description: Created shopping list
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ShoppingList"
+  /shopping-lists/{listId}:
+    parameters:
+      - name: listId
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+    get:
+      operationId: getShoppingList
+      tags: [shopping-lists]
+      summary: Get a shopping list the current user can access
+      responses:
+        "200":
+          description: Shopping list
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ShoppingList"
+        "404":
+          description: Shopping list not found
+    patch:
+      operationId: updateShoppingList
+      tags: [shopping-lists]
+      summary: Update a shopping list name
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ShoppingListUpdate"
+      responses:
+        "200":
+          description: Updated shopping list
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ShoppingList"
+        "404":
+          description: Shopping list not found
+  /shopping-lists/{listId}/items:
+    parameters:
+      - name: listId
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+    post:
+      operationId: addShoppingListItem
+      tags: [shopping-lists]
+      summary: Add an item to a shopping list
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ShoppingListItemInput"
+      responses:
+        "201":
+          description: Added shopping list item
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ShoppingListItem"
+        "404":
+          description: Shopping list not found
+  /shopping-lists/{listId}/items/{itemId}:
+    parameters:
+      - name: listId
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+      - name: itemId
+        in: path
+        required: true
+        schema:
+          type: string
+    patch:
+      operationId: updateShoppingListItem
+      tags: [shopping-lists]
+      summary: Update an item quantity or checked state
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ShoppingListItemUpdate"
+      responses:
+        "200":
+          description: Updated shopping list item
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ShoppingListItem"
+        "404":
+          description: Shopping list item not found
+    delete:
+      operationId: deleteShoppingListItem
+      tags: [shopping-lists]
+      summary: Remove an item from a shopping list
+      responses:
+        "204":
+          description: Removed shopping list item
+        "404":
+          description: Shopping list item not found
+  /shopping-lists/{listId}/clear-completed:
+    parameters:
+      - name: listId
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+    post:
+      operationId: clearCompletedShoppingListItems
+      tags: [shopping-lists]
+      summary: Remove all checked items
+      responses:
+        "200":
+          description: Number of removed items
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ShoppingListClearResult"
+        "404":
+          description: Shopping list not found
+  /shopping-lists/{listId}/invites:
+    parameters:
+      - name: listId
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+    post:
+      operationId: createShoppingListInvite
+      tags: [shopping-lists]
+      summary: Create a time-limited invite link
+      responses:
+        "201":
+          description: Invite link
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ShoppingListInvite"
+        "404":
+          description: Shopping list not found
+  /shopping-list-invites/accept:
+    post:
+      operationId: acceptShoppingListInvite
+      tags: [shopping-lists]
+      summary: Join a shopping list using an invite token
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ShoppingListInviteAcceptance"
+      responses:
+        "200":
+          description: Joined shopping list
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ShoppingList"
+        "404":
+          description: Invite link not found or expired
 components:
   schemas:
     HealthStatus:
@@ -33,4 +236,146 @@ components:
           type: string
       required:
         - status
+    ShoppingListItem:
+      type: object
+      properties:
+        id:
+          type: string
+        productId:
+          type: string
+        name:
+          type: string
+        category:
+          type: string
+        price:
+          type: number
+        unit:
+          type: string
+        quantity:
+          type: integer
+        checked:
+          type: boolean
+      required: [id, productId, name, category, price, unit, quantity, checked]
+    ShoppingListItemInput:
+      type: object
+      properties:
+        id:
+          type: string
+          minLength: 1
+        productId:
+          type: string
+          minLength: 1
+        name:
+          type: string
+          minLength: 1
+        category:
+          type: string
+        price:
+          type: number
+          minimum: 0
+        unit:
+          type: string
+          minLength: 1
+        quantity:
+          type: integer
+          minimum: 1
+        checked:
+          type: boolean
+      required: [id, productId, name, category, price, unit, quantity, checked]
+    ShoppingListItemUpdate:
+      type: object
+      properties:
+        quantity:
+          type: integer
+          minimum: 1
+        checked:
+          type: boolean
+      minProperties: 1
+    ShoppingList:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        name:
+          type: string
+        ownerId:
+          type: string
+        role:
+          type: string
+          enum: [owner, member]
+        memberCount:
+          type: integer
+        items:
+          type: array
+          items:
+            $ref: "#/components/schemas/ShoppingListItem"
+        updatedAt:
+          type: string
+          format: date-time
+      required: [id, name, ownerId, role, memberCount, items, updatedAt]
+    ShoppingListSummary:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        name:
+          type: string
+        ownerId:
+          type: string
+        role:
+          type: string
+          enum: [owner, member]
+        memberCount:
+          type: integer
+        itemCount:
+          type: integer
+        updatedAt:
+          type: string
+          format: date-time
+      required: [id, name, ownerId, role, memberCount, itemCount, updatedAt]
+    ShoppingListInput:
+      type: object
+      properties:
+        name:
+          type: string
+          minLength: 1
+          maxLength: 80
+        items:
+          type: array
+          items:
+            $ref: "#/components/schemas/ShoppingListItemInput"
+      required: [name, items]
+    ShoppingListUpdate:
+      type: object
+      properties:
+        name:
+          type: string
+          minLength: 1
+          maxLength: 80
+      required: [name]
+    ShoppingListInvite:
+      type: object
+      properties:
+        token:
+          type: string
+        expiresAt:
+          type: string
+          format: date-time
+      required: [token, expiresAt]
+    ShoppingListInviteAcceptance:
+      type: object
+      properties:
+        token:
+          type: string
+          minLength: 32
+          maxLength: 128
+      required: [token]
+    ShoppingListClearResult:
+      type: object
+      properties:
+        removedCount:
+          type: integer
+      required: [removedCount]
 
