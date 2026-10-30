@@ -1,14 +1,14 @@
 import { type FormEvent, useEffect, useMemo, useRef, useState } from 'react';
-import { ClerkProvider, Show, SignIn, SignUp, useClerk } from '@clerk/react';
+import { ClerkProvider, Show, SignIn, SignUp, useClerk, useUser } from '@clerk/react';
 import { publishableKeyFromHost } from '@clerk/react/internal';
 import { shadcn } from '@clerk/themes';
 import { caES } from '@clerk/localizations';
 import { QueryClient, QueryClientProvider, useQueryClient } from '@tanstack/react-query';
 import { Link, Redirect, Route, Router as WouterRouter, Switch, useLocation, useParams } from 'wouter';
 import {
-  ArrowRight, Check, CheckCheck, CircleUserRound, Clipboard, Copy, Egg, Flower2,
+  ArrowRight, Check, CheckCheck, CircleUserRound, Clipboard, CloudOff, Copy, Egg, Flower2,
   House, ListChecks, Mail, Minus, Plus, Search, Share2, ShoppingBasket, ShoppingCart,
-  Trash2, Wheat, X, Users, ChevronDown, LoaderCircle, LogOut, Link2, RefreshCw,
+  Sun, Moon, Volume2, VolumeX, Trash2, Wheat, X, Users, ChevronDown, LoaderCircle, LogOut, Link2, RefreshCw,
 } from 'lucide-react';
 import {
   getGetShoppingListQueryKey, getGetShoppingListsQueryKey,
@@ -44,6 +44,24 @@ const products = [
 const categories = ['Tot', 'Fruita i verdura', 'Forn', 'Làctics i ous', 'Rebost', 'Casa'];
 const euros = (value: number) => `${Number(value || 0).toFixed(2).replace('.', ',')} €`;
 const makeId = () => globalThis.crypto?.randomUUID?.() ?? `item-${Date.now()}-${Math.random().toString(36).slice(2)}`;
+const localListCacheKey = (userId: string, listId: string) => `llista-cache-v1:${userId}:${listId}`;
+
+function readCachedShoppingList(userId: string | undefined, listId: string): ShoppingList | undefined {
+  if (!userId || !listId) return undefined;
+  try {
+    const cached = JSON.parse(localStorage.getItem(localListCacheKey(userId, listId)) || 'null') as Partial<ShoppingList> | null;
+    if (!cached || cached.id !== listId || typeof cached.name !== 'string' || !Array.isArray(cached.items)) return undefined;
+    return cached as ShoppingList;
+  } catch {
+    return undefined;
+  }
+}
+
+function usePersistedTheme() {
+  const [isDark, setIsDark] = useState(() => localStorage.getItem('llista-theme') === 'dark');
+  useEffect(() => { localStorage.setItem('llista-theme', isDark ? 'dark' : 'light'); }, [isDark]);
+  return [isDark, setIsDark] as const;
+}
 
 function authRedirectTarget() {
   const fallback = `${basePath}/compra` || '/compra';
@@ -117,7 +135,8 @@ function HomeRedirect() { return <><Show when="signed-in"><Redirect to="/compra"
 function ProtectedPage({ view }: { view: 'shopping' | 'profile' }) { return <><Show when="signed-in"><AppFrame view={view} /></Show><Show when="signed-out"><Redirect to="/" /></Show></>; }
 
 function Home() {
-  return <div className="app-shell"><div className="grain" aria-hidden="true" /><header className="topbar"><Link href="/" className="brand" data-testid="link-brand-home"><span className="brand-mark"><ShoppingBasket size={20} /></span><span className="brand-name">llista compartida</span></Link><nav className="nav-links"><Link href="/sign-in" className="nav-link" data-testid="link-sign-in">Inicia sessió</Link><Link href="/sign-up" className="button button-primary" data-testid="link-sign-up">Crea un compte <ArrowRight size={16} /></Link></nav></header>
+  const [isDark, setIsDark] = usePersistedTheme();
+  return <div className={`app-shell${isDark ? ' dark' : ''}`}><div className="grain" aria-hidden="true" /><header className="topbar"><Link href="/" className="brand" data-testid="link-brand-home"><span className="brand-mark"><ShoppingBasket size={20} /></span><span className="brand-name">llista compartida</span></Link><div className="topbar-actions"><nav className="nav-links"><Link href="/sign-in" className="nav-link" data-testid="link-sign-in">Inicia sessió</Link><Link href="/sign-up" className="button button-primary" data-testid="link-sign-up">Crea un compte <ArrowRight size={16} /></Link></nav><button className="utility-button" onClick={() => setIsDark(value => !value)} aria-label={isDark ? 'Canvia al mode clar' : 'Canvia al mode fosc'} title={isDark ? 'Mode clar' : 'Mode fosc'} data-testid="button-theme-toggle">{isDark ? <Sun size={17} /> : <Moon size={17} />}</button></div></header>
     <main className="wrap welcome-wrap"><section className="hero-grid"><div className="reveal"><div className="eyebrow">La compra, entre tots</div><h1 className="hero-title">Una llista.<br />Més <em>fàcil.</em></h1><p className="hero-copy">Apunteu el que falta, marqueu el que ja teniu i convideu qui vulgueu. La compra de cada setmana, al mateix lloc i al mateix temps.</p><div className="hero-actions"><Link href="/sign-up" className="button button-primary" data-testid="button-start-shopping">Comença la llista <ArrowRight size={17} /></Link><Link href="/sign-in" className="text-link" data-testid="link-home-sign-in">Ja tens compte? Entra <ArrowRight size={15} /></Link></div><div className="privacy-note" data-testid="text-privacy-note"><Users size={15} /> Les llistes són teves. Tu decideixes amb qui compartir-les.</div></div>
     <div className="produce-art reveal-delay" role="img" aria-label="Cistella il·lustrada plena de productes frescos" data-testid="illustration-grocery-basket"><div className="produce-basket"><span className="fruit fruit-a" /><span className="fruit fruit-b" /><span className="fruit fruit-c" /><span className="fruit fruit-d" /><span className="fruit fruit-e" /><span className="basket" /></div><div className="art-tag"><ListChecks size={16} /> Una llista per compartir</div><div className="art-note">COMPRA D’AQUESTA SETMANA <span>— 04</span></div></div></section>
     <section className="section-band reveal-delay" aria-label="Com funciona"><article className="feature"><ShoppingBasket className="feature-icon" size={23} /><h3>Afegeix al teu ritme</h3><p>Troba productes o apunta allò que no surt al catàleg.</p></article><article className="feature"><CheckCheck className="feature-icon" size={23} /><h3>Marca i continua</h3><p>La llista es posa al dia per a tothom, al moment.</p></article><article className="feature"><Share2 className="feature-icon" size={23} /><h3>Convideu-vos</h3><p>Una invitació privada i la compra ja és compartida.</p></article></section>
@@ -126,9 +145,47 @@ function Home() {
 
 function AppFrame({ view }: { view: 'shopping' | 'profile' }) {
   const [location] = useLocation(); const [, setLocation] = useLocation(); const queryClient = useQueryClient();
-  const { signOut } = useClerk();
+  const { signOut } = useClerk(); const { user } = useUser();
   const [toast, setToast] = useState(''); const [selectedId, setSelectedId] = useState(() => localStorage.getItem('llista-selected-id') || '');
+  const [isDark, setIsDark] = usePersistedTheme();
+  const [soundEnabled, setSoundEnabled] = useState(() => localStorage.getItem('llista-sounds') === 'true');
+  const audioContextRef = useRef<AudioContext | null>(null);
+  const playSuccessSound = () => {
+    if (!soundEnabled || !window.AudioContext) return;
+    try {
+      const context = audioContextRef.current ?? new window.AudioContext();
+      audioContextRef.current = context;
+      if (context.state === 'suspended') void context.resume();
+      const oscillator = context.createOscillator();
+      const volume = context.createGain();
+      oscillator.type = 'sine';
+      oscillator.frequency.setValueAtTime(660, context.currentTime);
+      oscillator.frequency.exponentialRampToValueAtTime(880, context.currentTime + 0.12);
+      volume.gain.setValueAtTime(0.0001, context.currentTime);
+      volume.gain.exponentialRampToValueAtTime(0.045, context.currentTime + 0.02);
+      volume.gain.exponentialRampToValueAtTime(0.0001, context.currentTime + 0.2);
+      oscillator.connect(volume);
+      volume.connect(context.destination);
+      oscillator.start();
+      oscillator.stop(context.currentTime + 0.21);
+    } catch {
+      // Audio is optional; visual feedback and list updates still work when unavailable.
+    }
+  };
+  const toggleSound = () => {
+    const enable = !soundEnabled;
+    setSoundEnabled(enable);
+    if (!enable || !window.AudioContext) return;
+    try {
+      const context = audioContextRef.current ?? new window.AudioContext();
+      audioContextRef.current = context;
+      void context.resume();
+    } catch {
+      // The app remains fully usable if this browser does not support audio.
+    }
+  };
   const [listMenu, setListMenu] = useState(false); const [newListName, setNewListName] = useState(''); const [createOpen, setCreateOpen] = useState(false);
+  useEffect(() => { localStorage.setItem('llista-sounds', String(soundEnabled)); }, [soundEnabled]);
   const listsQuery = useGetShoppingLists({ query: { queryKey: getGetShoppingListsQueryKey(), refetchInterval: 5000 } }); const summaries = listsQuery.data ?? [];
   useEffect(() => {
     if (!listsQuery.isSuccess) return;
@@ -137,9 +194,19 @@ function AppFrame({ view }: { view: 'shopping' | 'profile' }) {
   }, [listsQuery.isSuccess, summaries, selectedId]);
   useEffect(() => { if (selectedId) localStorage.setItem('llista-selected-id', selectedId); }, [selectedId]);
   const listQuery = useGetShoppingList(selectedId || '', { query: { enabled: Boolean(selectedId), queryKey: getGetShoppingListQueryKey(selectedId || ''), refetchInterval: 2000 } });
-  const list = listQuery.data;
+  const localSnapshot = useMemo(() => readCachedShoppingList(user?.id, selectedId), [user?.id, selectedId]);
+  const list = listQuery.data ?? localSnapshot;
+  const isOfflineSnapshot = !listQuery.data && listQuery.isError && Boolean(localSnapshot);
+  useEffect(() => {
+    if (!user?.id || !listQuery.data) return;
+    try {
+      localStorage.setItem(localListCacheKey(user.id, listQuery.data.id), JSON.stringify(listQuery.data));
+    } catch {
+      setToast('No s’ha pogut desar la còpia local en aquest dispositiu.');
+    }
+  }, [user?.id, listQuery.data]);
   const refresh = () => { void queryClient.invalidateQueries({ queryKey: getGetShoppingListsQueryKey() }); if (selectedId) void queryClient.invalidateQueries({ queryKey: getGetShoppingListQueryKey(selectedId) }); };
-  const createList = useCreateShoppingList({ mutation: { onSuccess: result => { refresh(); setSelectedId(result.id); setCreateOpen(false); setNewListName(''); setToast('Llista creada'); } } });
+  const createList = useCreateShoppingList({ mutation: { onSuccess: result => { refresh(); setSelectedId(result.id); setCreateOpen(false); setNewListName(''); setToast('Llista creada'); playSuccessSound(); } } });
   const migrationAttempted = useRef(false);
   useEffect(() => {
     if (!listsQuery.isSuccess || summaries.length || migrationAttempted.current) return;
@@ -170,11 +237,11 @@ function AppFrame({ view }: { view: 'shopping' | 'profile' }) {
       setToast('No hem pogut recuperar la llista desada en aquest dispositiu.');
     }
   }, [listsQuery.isSuccess, summaries.length, createList.mutate, setToast]);
-  const renameList = useUpdateShoppingList({ mutation: { onSuccess: refresh } });
-  const addItem = useAddShoppingListItem({ mutation: { onSuccess: refresh } });
-  const patchItem = useUpdateShoppingListItem({ mutation: { onSuccess: refresh } });
-  const deleteItem = useDeleteShoppingListItem({ mutation: { onSuccess: refresh } });
-  const clearItems = useClearCompletedShoppingListItems({ mutation: { onSuccess: refresh } });
+  const renameList = useUpdateShoppingList({ mutation: { onSuccess: () => { refresh(); playSuccessSound(); } } });
+  const addItem = useAddShoppingListItem({ mutation: { onSuccess: () => { refresh(); playSuccessSound(); } } });
+  const patchItem = useUpdateShoppingListItem({ mutation: { onSuccess: () => { refresh(); playSuccessSound(); } } });
+  const deleteItem = useDeleteShoppingListItem({ mutation: { onSuccess: () => { refresh(); playSuccessSound(); } } });
+  const clearItems = useClearCompletedShoppingListItems({ mutation: { onSuccess: () => { refresh(); playSuccessSound(); } } });
   const makeInvite = useCreateShoppingListInvite();
   const [inviteUrl, setInviteUrl] = useState('');
   useEffect(() => { if (!toast) return; const timer = window.setTimeout(() => setToast(''), 2800); return () => window.clearTimeout(timer); }, [toast]);
@@ -184,7 +251,7 @@ function AppFrame({ view }: { view: 'shopping' | 'profile' }) {
   const createNewList = (event: FormEvent) => { event.preventDefault(); const name = newListName.trim(); if (name) createList.mutate({ data: { name, items: [] } }); };
   const invite = async () => {
     if (!selectedId) return;
-    makeInvite.mutate({ listId: selectedId }, { onSuccess: async result => { const url = `${window.location.origin}${basePath}/join/${result.token}`; setInviteUrl(url); try { await navigator.clipboard.writeText(url); setToast('Invitació copiada. Comparteix l’enllaç amb qui vulguis.'); } catch { setToast('Invitació creada. Copia l’enllaç per compartir-la.'); } } });
+    makeInvite.mutate({ listId: selectedId }, { onSuccess: async result => { playSuccessSound(); const url = `${window.location.origin}${basePath}/join/${result.token}`; setInviteUrl(url); try { await navigator.clipboard.writeText(url); setToast('Invitació copiada. Comparteix l’enllaç amb qui vulguis.'); } catch { setToast('Invitació creada. Copia l’enllaç per compartir-la.'); } } });
   };
   const copyInvite = async () => { if (!inviteUrl) return; try { await navigator.clipboard.writeText(inviteUrl); setToast('Enllaç copiat'); } catch { setToast('No s’ha pogut copiar l’enllaç'); } };
   const shareListText = list ? `${list.name}\n${list.items.map(item => `${item.checked ? 'Fet' : 'Per comprar'} · ${item.quantity} × ${item.name}`).join('\n')}\n\nTotal orientatiu: ${euros(total)}${inviteUrl ? `\n\nUneix-te a la llista: ${inviteUrl}` : ''}` : '';
@@ -192,8 +259,12 @@ function AppFrame({ view }: { view: 'shopping' | 'profile' }) {
   const shareWhatsapp = () => window.open(`https://wa.me/?text=${encodeURIComponent(`${shareListText}${inviteUrl ? `\n\nUneix-te a la llista: ${inviteUrl}` : ''}`)}`, '_blank', 'noopener,noreferrer');
   const shareMail = () => { window.location.href = `mailto:?subject=${encodeURIComponent(list?.name ?? 'Llista compartida')}&body=${encodeURIComponent(`${shareListText}${inviteUrl ? `\n\nUneix-te a la llista: ${inviteUrl}` : ''}`)}`; };
   const shareInstagram = async () => { try { await navigator.clipboard.writeText(shareListText); setToast('Llista copiada. Enganxa-la a Instagram.'); window.open('https://www.instagram.com/', '_blank', 'noopener,noreferrer'); } catch { setToast('No s’ha pogut copiar la llista.'); } };
-  const activeView = view === 'shopping' ? <ShoppingPage list={list} loading={listsQuery.isLoading || (!!selectedId && listQuery.isLoading)} error={listsQuery.isError || listQuery.isError} retry={() => { void listsQuery.refetch(); void listQuery.refetch(); }} summaries={summaries} onCreateList={() => setCreateOpen(true)} onAdd={(item) => selectedId && addItem.mutate({ listId: selectedId, data: item })} onUpdate={(itemId, patch) => selectedId && patchItem.mutate({ listId: selectedId, itemId, data: patch })} onDelete={itemId => selectedId && deleteItem.mutate({ listId: selectedId, itemId })} onRename={name => selectedId && renameList.mutate({ listId: selectedId, data: { name } })} onClear={() => selectedId && clearItems.mutate({ listId: selectedId })} toast={setToast} /> : <ProfilePage list={list} summaries={summaries} total={total} checkedCount={checkedCount} inviteUrl={inviteUrl} onInvite={invite} onCopyInvite={copyInvite} invitePending={makeInvite.isPending} shareWhatsapp={shareWhatsapp} shareMail={shareMail} shareNative={shareNative} shareInstagram={shareInstagram} />;
-  return <div className="app-shell"><div className="grain" aria-hidden="true" /><header className="topbar"><Link href="/compra" className="brand" data-testid="link-brand-app"><span className="brand-mark"><ShoppingBasket size={20} /></span><span className="brand-name">llista compartida</span></Link><nav className="nav-links" aria-label="Navegació principal"><Link href="/compra" className={`nav-link ${location === '/compra' ? 'active' : ''}`} data-testid="link-compra">La compra</Link><Link href="/perfil" className={`nav-link ${location === '/perfil' ? 'active' : ''}`} data-testid="link-perfil">El meu resum</Link><button className="nav-link logout-link" onClick={() => signOut({ redirectUrl: basePath || '/' })} data-testid="button-sign-out"><LogOut size={15} /> Surt</button></nav></header>
+  const activeView = isOfflineSnapshot && localSnapshot
+    ? <OfflineSnapshot list={localSnapshot} retry={() => { void listsQuery.refetch(); void listQuery.refetch(); }} />
+    : view === 'shopping'
+      ? <ShoppingPage list={list} loading={listsQuery.isLoading || (!!selectedId && listQuery.isLoading && !localSnapshot)} error={listsQuery.isError || listQuery.isError} retry={() => { void listsQuery.refetch(); void listQuery.refetch(); }} summaries={summaries} onCreateList={() => setCreateOpen(true)} onAdd={(item) => selectedId && addItem.mutate({ listId: selectedId, data: item })} onUpdate={(itemId, patch) => selectedId && patchItem.mutate({ listId: selectedId, itemId, data: patch })} onDelete={itemId => selectedId && deleteItem.mutate({ listId: selectedId, itemId })} onRename={name => selectedId && renameList.mutate({ listId: selectedId, data: { name } })} onClear={() => selectedId && clearItems.mutate({ listId: selectedId })} toast={setToast} />
+      : <ProfilePage list={list} summaries={summaries} total={total} checkedCount={checkedCount} inviteUrl={inviteUrl} onInvite={invite} onCopyInvite={copyInvite} invitePending={makeInvite.isPending} shareWhatsapp={shareWhatsapp} shareMail={shareMail} shareNative={shareNative} shareInstagram={shareInstagram} />;
+  return <div className={`app-shell${isDark ? ' dark' : ''}`}><div className="grain" aria-hidden="true" /><header className="topbar"><Link href="/compra" className="brand" data-testid="link-brand-app"><span className="brand-mark"><ShoppingBasket size={20} /></span><span className="brand-name">llista compartida</span></Link><div className="topbar-actions"><nav className="nav-links" aria-label="Navegació principal"><Link href="/compra" className={`nav-link ${location === '/compra' ? 'active' : ''}`} data-testid="link-compra">La compra</Link><Link href="/perfil" className={`nav-link ${location === '/perfil' ? 'active' : ''}`} data-testid="link-perfil">El meu resum</Link><button className="nav-link logout-link" onClick={() => signOut({ redirectUrl: basePath || '/' })} data-testid="button-sign-out"><LogOut size={15} /> Surt</button></nav><button className="utility-button" onClick={() => setIsDark(value => !value)} aria-label={isDark ? 'Canvia al mode clar' : 'Canvia al mode fosc'} aria-pressed={isDark} title={isDark ? 'Mode clar' : 'Mode fosc'} data-testid="button-theme-toggle">{isDark ? <Sun size={17} /> : <Moon size={17} />}</button><button className={`utility-button${soundEnabled ? ' utility-active' : ''}`} onClick={toggleSound} aria-label={soundEnabled ? 'Desactiva els sons' : 'Activa els sons'} aria-pressed={soundEnabled} title={soundEnabled ? 'Sons activats' : 'Activa els sons'} data-testid="button-sound-toggle">{soundEnabled ? <Volume2 size={17} /> : <VolumeX size={17} />}</button></div></header>
     <main className="wrap app-wrap"><div className="list-switcher-row"><div className="list-switcher-wrap"><button className="list-switcher" onClick={() => setListMenu(!listMenu)} aria-expanded={listMenu} data-testid="button-switch-list"><span className="switcher-icon"><Clipboard size={17} /></span><span className="switcher-copy"><small>LLISTA SELECCIONADA</small><strong data-testid="text-selected-list">{list?.name ?? 'Tria una llista'}</strong></span><ChevronDown size={17} /></button>{listMenu && <div className="list-dropdown" data-testid="menu-shopping-lists">{summaries.map((summary: ShoppingListSummary) => <button className={`list-option ${selectedId === summary.id ? 'selected' : ''}`} key={summary.id} onClick={() => selectList(summary.id)} data-testid={`button-select-list-${summary.id}`}><span>{summary.name}</span><small>{summary.memberCount} {summary.memberCount === 1 ? 'persona' : 'persones'} · {summary.itemCount} articles</small></button>)}<button className="list-option new-list-option" onClick={() => { setCreateOpen(true); setListMenu(false); }} data-testid="button-create-list-open"><Plus size={16} /> Crea una llista nova</button></div>}</div><div className="members-indicator" data-testid="text-member-count"><Users size={16} /><strong>{list?.memberCount ?? summaries.find(s => s.id === selectedId)?.memberCount ?? 0}</strong><span>{(list?.memberCount ?? 0) === 1 ? 'persona' : 'persones'}</span></div><button className="refresh-button" onClick={() => { void listQuery.refetch(); void listsQuery.refetch(); }} aria-label="Actualitza la llista" data-testid="button-refresh-list"><RefreshCw size={16} /></button></div>
       {createOpen && <form className="create-list-form" onSubmit={createNewList}><label htmlFor="new-list-name">Nom de la llista</label><div><input id="new-list-name" autoFocus value={newListName} onChange={e => setNewListName(e.target.value)} placeholder="La compra de casa" maxLength={80} data-testid="input-new-list-name" /><button className="button button-primary" type="submit" disabled={!newListName.trim() || createList.isPending} data-testid="button-create-list-submit">{createList.isPending ? 'Creant…' : 'Crea llista'}</button><button className="icon-button" type="button" onClick={() => setCreateOpen(false)} aria-label="Tanca" data-testid="button-close-create-list"><X size={17} /></button></div></form>}
       {activeView}
@@ -219,6 +290,19 @@ function ShoppingPage({ list, loading, error, retry, summaries, onCreateList, on
     <section className="card panel reveal" aria-label="Catàleg de productes"><div className="panel-head"><h2 className="panel-title">Troba-ho al catàleg</h2><ShoppingBasket size={20} color="#6a8a68" /></div><label className="search-box"><Search size={18} /><input type="search" value={search} onChange={event => setSearch(event.target.value)} placeholder="Busca un producte..." aria-label="Busca un producte" data-testid="input-product-search" /></label><div className="chips" role="group" aria-label="Filtra per categoria">{categories.map(item => <button key={item} className={`chip ${category === item ? 'active' : ''}`} onClick={() => setCategory(item)} data-testid={`filter-category-${item.toLowerCase().replaceAll(' ', '-')}`}>{item}</button>)}</div><div className="product-list">{filtered.length ? filtered.map(product => <div className="product-row" key={product.id} data-testid={`row-product-${product.id}`}><div className="product-dot">{iconForCategory(product.category)}</div><div className="product-info"><div className="product-name">{product.name}</div><div className="product-meta">{product.category} · per {product.unit}</div></div><div className="product-price">{euros(product.price)}</div><button className="add-button" onClick={() => append(product)} aria-label={`Afegeix ${product.name}`} data-testid={`button-add-${product.id}`}><Plus size={17} /></button></div>) : <div className="empty-state" data-testid="empty-catalog"><Search size={23} /><div>No hem trobat cap producte.</div><small>Prova una altra cerca o afegeix-lo a mà.</small></div>}</div><form className="custom-entry" onSubmit={addCustom}><input value={customName} onChange={event => setCustomName(event.target.value)} placeholder="Un producte a mà..." aria-label="Nom del producte personalitzat" data-testid="input-custom-product-name" /><input value={customPrice} onChange={event => setCustomPrice(event.target.value)} inputMode="decimal" placeholder="Preu €" aria-label="Preu aproximat" data-testid="input-custom-product-price" /><button type="submit" className="add-button" aria-label="Afegeix producte personalitzat" data-testid="button-add-custom"><Plus size={18} /></button></form></section>
     <section className="card panel reveal-delay" aria-label="Llista editable"><div className="panel-head"><h2 className="panel-title">La vostra llista</h2><span className="list-count" data-testid="text-list-item-count">{list.items.length} articles</span></div><div className="list-top"><input className="title-input" value={titleDraft} onChange={event => setTitleDraft(event.target.value)} onBlur={() => { const name = titleDraft.trim(); if (name && name !== list.name) onRename(name); else if (!name) setTitleDraft(list.name); }} onKeyDown={event => { if (event.key === 'Enter') event.currentTarget.blur(); }} aria-label="Títol de la llista" data-testid="input-list-title" maxLength={80} /><Clipboard size={17} color="#8a9486" /></div><div className="list-items">{list.items.length ? list.items.map(item => <div className={`list-item ${item.checked ? 'item-checked' : ''}`} key={item.id} data-testid={`row-list-item-${item.id}`}><button className={`check-btn ${item.checked ? 'checked' : ''}`} onClick={() => onUpdate(item.id, { checked: !item.checked })} aria-label={item.checked ? `Desmarca ${item.name}` : `Marca ${item.name}`} data-testid={`button-check-${item.id}`}>{item.checked && <Check size={14} />}</button><div className="item-main"><div className="item-name">{item.name}</div><div className="item-detail">{euros(item.price)} / {item.unit} · {euros(item.price * item.quantity)}</div></div><div className="qty-controls"><button className="qty-btn" onClick={() => item.quantity > 1 ? onUpdate(item.id, { quantity: item.quantity - 1 }) : setConfirmDeleteId(item.id)} aria-label={`Redueix ${item.name}`} data-testid={`button-quantity-minus-${item.id}`}><Minus size={13} /></button><span className="qty-number" data-testid={`text-quantity-${item.id}`}>{item.quantity}</span><button className="qty-btn" onClick={() => onUpdate(item.id, { quantity: item.quantity + 1 })} aria-label={`Augmenta ${item.name}`} data-testid={`button-quantity-plus-${item.id}`}><Plus size={13} /></button><button className="remove-btn" onClick={() => setConfirmDeleteId(item.id)} aria-label={`Elimina ${item.name}`} data-testid={`button-remove-${item.id}`}><X size={16} /></button></div></div>) : <div className="empty-state" data-testid="empty-shopping-list"><ShoppingBasket size={25} /><div>La llista encara és buida.</div><small>Afegeix-hi els primers productes des del catàleg.</small></div>}</div><div className="list-footer"><div><div className="total-label">Total orientatiu</div><div className="total-value" data-testid="text-list-total">{euros(total)}</div></div><button className="clear-btn" onClick={onClear} data-testid="button-clear-checked"><Trash2 size={14} /> Neteja els marcats</button></div></section>
   </div>{confirmDeleteItem && <div className="dialog-backdrop" role="presentation"><section className="confirm-dialog card" role="alertdialog" aria-modal="true" aria-labelledby="delete-dialog-title"><div className="eyebrow">Eliminar producte</div><h2 id="delete-dialog-title">Vols treure “{confirmDeleteItem.name}”?</h2><p>Aquest canvi també es veurà a la llista compartida.</p><div className="dialog-actions"><button className="button button-line" onClick={() => setConfirmDeleteId('')} data-testid="button-cancel-delete-item">Cancel·la</button><button className="button delete-confirm" onClick={() => { onDelete(confirmDeleteItem.id); setConfirmDeleteId(''); }} data-testid="button-confirm-delete-item">Elimina</button></div></section></div>}</>;
+}
+
+function OfflineSnapshot({ list, retry }: { list: ShoppingList; retry: () => void }) {
+  const total = list.items.reduce((sum, item) => sum + item.price * item.quantity, 0);
+  return <section className="card offline-snapshot" data-testid="offline-list-snapshot">
+    <div className="offline-icon"><CloudOff size={22} /></div>
+    <div className="eyebrow">Còpia local</div>
+    <h1>{list.name}</h1>
+    <p>No hem pogut connectar amb la llista compartida. Aquesta és la darrera còpia desada en aquest dispositiu; és només de lectura fins que es recuperi la connexió.</p>
+    <button className="button button-primary" onClick={retry} data-testid="button-retry-offline-list"><RefreshCw size={16} /> Torna-ho a provar</button>
+    <div className="offline-items">{list.items.length ? list.items.map(item => <div className={`list-item ${item.checked ? 'item-checked' : ''}`} key={item.id}><span className={`check-btn${item.checked ? ' checked' : ''}`}>{item.checked && <Check size={14} />}</span><div className="item-main"><div className="item-name">{item.name}</div><div className="item-detail">{item.quantity} × {item.unit}</div></div><div className="product-price">{euros(item.price * item.quantity)}</div></div>) : <div className="empty-state">La còpia local no conté cap article.</div>}</div>
+    <div className="offline-total"><span>{list.items.filter(item => item.checked).length} marcats</span><strong>Total orientatiu · {euros(total)}</strong></div>
+  </section>;
 }
 
 function ProfilePage({ list, summaries, total, checkedCount, inviteUrl, onInvite, onCopyInvite, invitePending, shareWhatsapp, shareMail, shareNative, shareInstagram }: {
