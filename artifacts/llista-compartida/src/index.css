@@ -262,6 +262,7 @@
 .members-indicator strong { color:#315b43;font:500 12px var(--app-font-mono); }
 .refresh-button,.icon-button { display:grid;place-items:center;width:38px;height:38px;border:1px solid #deded2;border-radius:12px;background:#fbfaf4;color:#66806b;cursor:pointer; }
 .refresh-button:hover,.icon-button:hover { background:#edf0e4;color:#286748; }
+.refresh-button:disabled { cursor:wait;opacity:.68; }
 .create-list-form { margin:-8px 0 22px;padding:18px 20px;background:#eaeddf;border:1px solid #dfe4d4;border-radius:17px; }
 .create-list-form label { display:block;margin-bottom:8px;color:#617365;font:500 10px var(--app-font-mono);letter-spacing:.7px;text-transform:uppercase; }
 .create-list-form > div { display:flex;gap:9px; }
