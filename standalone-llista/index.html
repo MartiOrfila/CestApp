@@ -1,0 +1,208 @@
+<!doctype html>
+<html lang="ca" data-theme="light">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#f5f2e9">
+  <title>Llista compartida</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Fraunces:opsz,wght@9..144,600;9..144,700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="style.css">
+  <script src="script.js" defer></script>
+</head>
+<body>
+  <div class="app-shell">
+    <header class="topbar">
+      <a class="brand" href="#welcome" id="brand-home" aria-label="Ves a l'inici">
+        <span class="brand-mark" aria-hidden="true">✳</span>
+        <span>Llista compartida</span>
+      </a>
+
+      <nav class="main-nav" id="main-nav" aria-label="Navegació principal" hidden>
+        <button class="nav-button" data-screen="shopping">La compra</button>
+        <button class="nav-button" data-screen="profile">El meu resum</button>
+      </nav>
+
+      <div class="header-actions">
+        <button class="icon-button" id="refresh-button" type="button"
+          aria-label="Actualitza les dades guardades" title="Actualitza les dades guardades">
+          <svg viewBox="0 0 24 24" aria-hidden="true">
+            <path d="M20 7v5h-5M4 17v-5h5"></path>
+            <path d="M5.6 9a7 7 0 0 1 11.8-2L20 12M4 12l2.6 5a7 7 0 0 0 11.8-2"></path>
+          </svg>
+        </button>
+        <button class="icon-button" id="theme-button" type="button"
+          aria-label="Activa el mode fosc" title="Canvia el tema">
+          <span aria-hidden="true">☾</span>
+        </button>
+        <button class="icon-button" id="sound-button" type="button"
+          aria-label="Activa els sons" aria-pressed="false" title="Activa o desactiva els sons">
+          <span aria-hidden="true">♫</span>
+        </button>
+      </div>
+    </header>
+
+    <main class="main-content">
+      <section class="screen welcome-screen" id="welcome-screen">
+        <div class="welcome-copy">
+          <p class="eyebrow">La compra, entre tots</p>
+          <h1>Una llista.<br>Més <em>fàcil.</em></h1>
+          <p class="hero-description">
+            Apunteu el que falta, marqueu el que ja teniu i tingueu la compra sempre a mà.
+          </p>
+          <button class="button button-primary button-large" data-screen="shopping">
+            Comença la llista <span aria-hidden="true">→</span>
+          </button>
+          <p class="privacy-note">Les dades es guarden en aquest dispositiu.</p>
+        </div>
+
+        <div class="produce-art" role="img" aria-label="Il·lustració d'una cistella amb fruita">
+          <div class="art-sun"></div>
+          <span class="fruit fruit-one">🍊</span>
+          <span class="fruit fruit-two">🍋</span>
+          <span class="fruit fruit-three">🥑</span>
+          <span class="fruit fruit-four">🍅</span>
+          <span class="fruit fruit-five">🍐</span>
+          <div class="basket-art"></div>
+          <div class="art-label">Una llista per compartir</div>
+        </div>
+
+        <div class="feature-row">
+          <article class="feature-card">
+            <span class="feature-icon" aria-hidden="true">＋</span>
+            <div><h2>Afegeix al teu ritme</h2><p>Busca productes o apunta’ls a mà.</p></div>
+          </article>
+          <article class="feature-card">
+            <span class="feature-icon" aria-hidden="true">✓</span>
+            <div><h2>Marca i continua</h2><p>Fes seguiment del que ja tens.</p></div>
+          </article>
+          <article class="feature-card">
+            <span class="feature-icon" aria-hidden="true">↗</span>
+            <div><h2>Comparteix-la</h2><p>Envia el resum a qui vulguis.</p></div>
+          </article>
+        </div>
+      </section>
+
+      <section class="screen" id="shopping-screen" hidden>
+        <div class="page-heading">
+          <div>
+            <p class="eyebrow">El que necessiteu</p>
+            <h1>La compra</h1>
+          </div>
+          <span class="item-count" id="pending-count">0 per comprar</span>
+        </div>
+
+        <div class="shopping-grid">
+          <section class="panel">
+            <div class="panel-heading">
+              <div>
+                <p class="eyebrow">Catàleg</p>
+                <h2>Troba-ho ràpid</h2>
+              </div>
+              <span class="panel-heading-icon" aria-hidden="true">⌕</span>
+            </div>
+
+            <label class="search-box">
+              <span aria-hidden="true">⌕</span>
+              <input id="search-input" type="search" placeholder="Busca un producte..."
+                autocomplete="off" aria-label="Busca un producte">
+            </label>
+
+            <div class="category-list" id="category-list" aria-label="Categories"></div>
+            <div class="product-list" id="product-list"></div>
+
+            <form class="custom-form" id="custom-form">
+              <label class="sr-only" for="custom-name">Producte personalitzat</label>
+              <input id="custom-name" type="text" maxlength="60" placeholder="Afegeix un altre producte..."
+                autocomplete="off">
+              <label class="sr-only" for="custom-price">Preu aproximat</label>
+              <input id="custom-price" type="number" min="0" step="0.01" inputmode="decimal" placeholder="€">
+              <button class="add-button" type="submit" aria-label="Afegeix el producte personalitzat">＋</button>
+            </form>
+          </section>
+
+          <section class="panel list-panel">
+            <div class="panel-heading">
+              <div>
+                <p class="eyebrow">La vostra llista</p>
+                <label class="sr-only" for="list-name">Nom de la llista</label>
+                <input class="list-title-input" id="list-name" type="text" maxlength="60" value="La compra de casa">
+              </div>
+              <span class="item-count" id="total-count">0 articles</span>
+            </div>
+
+            <div class="shopping-items" id="shopping-items"></div>
+
+            <div class="list-footer">
+              <div>
+                <span class="footer-label">Total orientatiu</span>
+                <strong class="total-price" id="total-price">0,00 €</strong>
+              </div>
+              <button class="text-button" id="clear-checked" type="button">Neteja els marcats</button>
+            </div>
+          </section>
+        </div>
+      </section>
+
+      <section class="screen" id="profile-screen" hidden>
+        <div class="page-heading">
+          <div>
+            <p class="eyebrow">Tot a punt</p>
+            <h1>El teu resum</h1>
+          </div>
+          <button class="button button-quiet" data-screen="shopping">← Edita la llista</button>
+        </div>
+
+        <div class="profile-grid">
+          <section class="panel profile-card">
+            <div class="profile-avatar" aria-hidden="true">🧺</div>
+            <p class="eyebrow">La llista seleccionada</p>
+            <h2 id="profile-list-name">La compra de casa</h2>
+            <p class="muted-copy">Un resum ràpid de la compra i del que encara falta.</p>
+
+            <div class="stats-grid">
+              <article class="stat-card">
+                <span>Articles</span><strong id="stat-total">0</strong>
+              </article>
+              <article class="stat-card">
+                <span>Per comprar</span><strong id="stat-pending">0</strong>
+              </article>
+              <article class="stat-card">
+                <span>Total aprox.</span><strong id="stat-price">0,00 €</strong>
+              </article>
+            </div>
+          </section>
+
+          <section class="panel share-card">
+            <p class="eyebrow">Envia el resum</p>
+            <h2>Comparteix la compra</h2>
+            <p class="muted-copy">Tria una aplicació per enviar el resum de la llista.</p>
+            <div class="share-grid">
+              <button class="share-button" id="share-whatsapp"><span>↗</span> WhatsApp</button>
+              <button class="share-button" id="share-email"><span>✉</span> Correu</button>
+              <button class="share-button" id="share-instagram"><span>▣</span> Instagram</button>
+              <button class="share-button" id="share-native"><span>•••</span> Més opcions</button>
+            </div>
+          </section>
+
+          <section class="panel profile-items-card">
+            <div class="panel-heading">
+              <div><p class="eyebrow">D’un cop d’ull</p><h2>Articles de la llista</h2></div>
+              <span class="item-count" id="profile-checked-count">0 fets</span>
+            </div>
+            <div id="profile-items"></div>
+          </section>
+        </div>
+      </section>
+    </main>
+
+    <nav class="mobile-nav" id="mobile-nav" aria-label="Navegació mòbil" hidden>
+      <button data-screen="shopping"><span aria-hidden="true">▤</span>La compra</button>
+      <button data-screen="profile"><span aria-hidden="true">◉</span>Resum</button>
+    </nav>
+
+    <div class="toast" id="toast" role="status" aria-live="polite"></div>
+  </div>
+</body>
+</html>
